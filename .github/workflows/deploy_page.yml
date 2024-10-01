@@ -1,0 +1,43 @@
+name: Build and Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - '*'  # Trigger on all branches'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: 'npm'
+
+    - name: Build project
+      run: |
+        npm ci
+        npm run build-ci
+
+    - name: Upload build artifacts
+      uses: actions/upload-pages-artifact@v3  # This stores the build output
+      with:
+        path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # Only deploy on main branch
+    if: github.ref == 'refs/heads/main' 
+    permissions:
+      pages: write  # Allows deployment to GitHub Pages
+      id-token: write  # Needed for GitHub Pages deployment
+
+    steps:
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4  # This deploys the stored artifacts

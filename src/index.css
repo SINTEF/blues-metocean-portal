@@ -1,0 +1,25 @@
+html {
+  font-size: 16px;
+}
+
+.lm_tab {
+  height: 40px !important;
+  line-height: 40px;
+  background: white !important;
+}
+
+.lm_close_tab {
+  height: 35px !important;
+}
+
+.lm_controls {
+  top: 13px;
+}
+
+.lm_content {
+  background: white !important;
+  overflow: auto !important;
+}
+.lm_goldenlayout {
+  background: white !important;
+}

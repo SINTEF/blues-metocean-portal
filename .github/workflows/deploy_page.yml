@@ -33,6 +33,8 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    environment:
+    name: github-pages
     # Only deploy on main branch
     if: github.ref == 'refs/heads/main' 
     permissions:

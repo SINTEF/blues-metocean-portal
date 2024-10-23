@@ -1,5 +1,5 @@
 import React, { createContext, useEffect, useState } from 'react'
-import { BrowserRouter } from 'react-router-dom'
+import { HashRouter  } from 'react-router-dom'
 import { createGlobalStyle } from 'styled-components'
 import { backgroundColorDefault } from './layout/Colors'
 import Portal from './Portal'
@@ -44,10 +44,10 @@ const App = () => {
   }
   return (
     <AppCtx.Provider value={app}>
-      <BrowserRouter basename='/blues-metocean-portal'>
+      <HashRouter>
         <GlobalStyle />
         <Portal />
-      </BrowserRouter>
+      </HashRouter >
     </AppCtx.Provider>
   )
 }

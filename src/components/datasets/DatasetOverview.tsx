@@ -5,18 +5,18 @@ import { Grid, LinearProgress } from '@mui/material'
 import Box from '@mui/material/Box'
 import { LatLng, latLng } from 'leaflet'
 import { AppCtx } from '../../App'
-import { Dataset,DatasetContainer } from '../../Types'
+import { Dataset,DatasetProvider } from '../../Types'
 import { CardWrapper } from '../Card'
 import { TextMarker } from '../TextMarker'
 import DatasetMap, { MapDataset } from './DatasetMap'
 import { DatasetView } from './DatasetView'
 
 
-const colors = ["red", "blue", "yellow"]
+const colors = ["red","orange","yellow","green", "blue", "purple", "grey"]
 
 function createSetNode(set: Dataset, counter: () => number): TreeNode {
   const idx = counter()
-  const color = colors[idx]
+  const color = colors[idx%colors.length]
   const mset: MapDataset = {
     dataset: set,
     selected: false,
@@ -31,7 +31,7 @@ function createSetNode(set: Dataset, counter: () => number): TreeNode {
   }
 }
 
-function createContainerNode(container: DatasetContainer, ccounter: () => number, scounter: () => number): TreeNode {
+function createContainerNode(container: DatasetProvider, ccounter: () => number, scounter: () => number): TreeNode {
   const node: TreeNode = {
     id: "container" + ccounter(),
     checked: false,
@@ -39,9 +39,6 @@ function createContainerNode(container: DatasetContainer, ccounter: () => number
   }
 
   var children: TreeNode[] = []
-  if (container.containers) {
-    children = container.containers.map((cnode) => createContainerNode(cnode, ccounter, scounter))
-  }
   const sets = container.datasets
   if (sets) {
     children = children.concat(sets.map((node) => createSetNode(node, scounter)));
@@ -95,7 +92,7 @@ export function DatasetOverview() {
 
   useEffect(() => {
     if (app) {
-      const containers = app.datasetContainers
+      const containers = app.providers
       var ccount = 0
       var scount = 0
       const ccounter = () => {

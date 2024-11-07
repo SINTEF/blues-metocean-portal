@@ -16,7 +16,7 @@ export const DatasetView = (props: { set: Dataset, position: LatLng  }): JSX.Ele
   const { set,position } = props
   return (
     <>
-      <Accordion>
+      <Accordion defaultExpanded>
         <AccordionSummary sx={{ flexDirection: "row-reverse" }}
           expandIcon={<ExpandMoreIcon />}
         >
@@ -32,6 +32,10 @@ export const DatasetView = (props: { set: Dataset, position: LatLng  }): JSX.Ele
               <TableRow>
                 <TableCell>Data from</TableCell>
                 <TableCell>{moment((set.fromDate)).format('MMMM D, YYYY')}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Data to</TableCell>
+                <TableCell>{moment((set.toDate)).format('MMMM D, YYYY')}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell>Found here</TableCell>

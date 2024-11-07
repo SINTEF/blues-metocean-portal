@@ -4,43 +4,29 @@ import { Stack } from '@mui/system'
 import { LatLng } from 'leaflet'
 import React, { useContext, useEffect, useState } from 'react'
 import { FeatureGroup, Polygon, TileLayer } from 'react-leaflet'
-import { Dataset,DatasetContainer,DatasetVariable } from '../../../Types'
-import { AppCtx } from '../../../App'
-import { CardWrapper } from '../../Card'
-import CodeBox from '../../CodeBox'
-import { DraggableMarker } from '../../DragableMarker'
-import { StyledMapContainer } from '../../Map'
-import { TextMarker } from '../../TextMarker'
-import { toHindcastCode } from './SimaHindcastTemplate'
-import { toScatterCode } from './SimaScatterTemplate'
-
-function findDatasets(container: DatasetContainer, selectedSets: Dataset[]) {
-  container.containers?.forEach(child => findDatasets(child, selectedSets))
-  container.datasets?.filter(include).forEach(dataset => selectedSets.push(dataset))
-}
+import { Dataset,DatasetVariable } from '../../Types'
+import { AppCtx } from '../../App'
+import { CardWrapper } from '../Card'
+import CodeBox from '../CodeBox'
+import { DraggableMarker } from '../DragableMarker'
+import { StyledMapContainer } from '../Map'
+import { TextMarker } from '../TextMarker'
+import { toHindcastCode } from './sima/SimaHindcastTemplate'
 
 function include(set: Dataset){
-  if(set.variables.find(isHsOrTp)){
+  if(set.variables.find(includeVariable)){
     return true;
   }
   return false;
 }
 
-function hasUnit(variable: DatasetVariable, unit: string) {
+function includeVariable(variable: DatasetVariable) {
   const dims = variable.dimensions
-  const vunit = variable.unit
-  if (dims && dims.includes("time")) {
-    return vunit && (vunit === unit)
-  }
-  return false
-}
-
-function isHsOrTp(variable: DatasetVariable) {
-  return hasUnit(variable,"m") || hasUnit(variable,"s")
+  return dims && dims.includes("time")
 }
 
 
-const SimaView = () => {
+const HindcastView = () => {
 
   const app = useContext(AppCtx);
 
@@ -51,20 +37,17 @@ const SimaView = () => {
 
 
   const [code, setCode] = useState<string>("")
-  const [type, setType] = useState<string>("Scatter")
 
   useEffect(() => {
     if (selectedSet) {
-      const func = toCode(type)
-      setCode(func(selectedSet,position))
+      setCode(toHindcastCode(selectedSet,position))
     }
-  }, [position, selectedSet,type])
+  }, [position, selectedSet])
 
   useEffect(() => {
     if (app) {
-      app.datasetContainers.forEach(container => {
-        const availableSets: Dataset[] = []
-        container.containers?.forEach(child => findDatasets(child, availableSets))
+      app.providers.forEach(container => {
+        const availableSets = container.datasets.filter(include)
         setDatasets(availableSets)
         if (availableSets.length > 0) {
           setSelectedSet(availableSets[0])
@@ -72,14 +55,6 @@ const SimaView = () => {
       })
     }
   }, [app])
-
-  function toCode(type: string){
-    if(type==="Scatter"){
-      return toScatterCode
-    }
-    return toHindcastCode
-  }
-
 
   function getArea(set: Dataset): [number, number][] {
     const lats = set.latitudes
@@ -111,7 +86,7 @@ const SimaView = () => {
               Integration towards the SIMA Metocean task
             </h4>
             <div>
-              This guide shows how to use the <a href='https://github.com/SINTEF/simapy'>SIMAPY python library</a> to create metocean data.<b/>
+              This guide shows how to use the <a href='https://github.com/SINTEF/simapy'>SIMAPY python library</a> to create hindcast data.<b/>
               The data can then be imported into SIMA and used to run multiple cases/conditions.<b/>
               Right click Metocean Task in SIMA and choose "import metocean data", then select the generated file to import
             </div>
@@ -119,13 +94,6 @@ const SimaView = () => {
             <TextMarker position={position} setPosition={setPosition} />
             <Stack>
               {selectedSet && <>
-                <Select
-                  id="select-type"
-                  value={type}
-                  label="Type"
-                >
-                  {["Scatter","Hindcast"].map(label => <MenuItem key={label} value={label} onClick={() => setType(label)}>{label}</MenuItem>)}
-                </Select>
                 <InputLabel>Selected dataset:</InputLabel>
                 <Select
                   id="select-ds"
@@ -161,4 +129,4 @@ const SimaView = () => {
   )
 }
 
-export default SimaView
+export default HindcastView

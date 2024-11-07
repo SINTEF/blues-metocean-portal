@@ -5,19 +5,13 @@ import { LatLng } from 'leaflet'
 import React, { useContext, useEffect, useState } from 'react'
 import { FeatureGroup, Polygon, TileLayer } from 'react-leaflet'
 import { AppCtx } from '../../App'
-import { Dataset,DatasetContainer,DatasetVariable } from '../../Types'
+import { Dataset,DatasetVariable } from '../../Types'
 import { CardWrapper } from '../Card'
 import CodeBox from '../CodeBox'
 import { DraggableMarker } from '../DragableMarker'
 import { StyledMapContainer } from '../Map'
 import { TextMarker } from '../TextMarker'
 import {toCodeString} from './ReportTemplate'
-
-function findDatasets(container: DatasetContainer, selectedSets: Dataset[]) {
-  container.containers?.forEach(child => findDatasets(child, selectedSets))
-  container.datasets?.forEach(dataset => selectedSets.push(dataset))
-}
-
 
 const ReturnValueStats = () => {
 
@@ -46,9 +40,8 @@ const ReturnValueStats = () => {
 
   useEffect(() => {
     if (app) {
-      app.datasetContainers.forEach(container => {
-        const availableSets: Dataset[] = []
-        container.containers?.forEach(child => findDatasets(child, availableSets))
+      app.providers.forEach(container => {
+        const availableSets = container.datasets
         setDatasets(availableSets)
         if (availableSets.length > 0) {
           setSelectedSet(availableSets[0])

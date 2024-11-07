@@ -13,40 +13,44 @@ import { LatLng } from 'leaflet'
 import CodeBox from '../CodeBox'
 
 function toCodeString(set: Dataset, pos: LatLng,selected: DatasetVariable[]): string {
-  const api = set.api
-  const idx = api.lastIndexOf(".")
-  const dataset = api.substring(idx + 1)
-  const imprt = api.substring(0, idx)
-  const importstatement = `from bluesmet.${imprt} import ${dataset}`
   return `
-from datetime import datetime
-${importstatement}
+from metocean_api.ts import TimeSeries
 
 # Coordinates we want to get data for
 lat_pos = ${pos.lat.toFixed(4)}
 lon_pos = ${pos.lng.toFixed(4)}
-start_date = datetime(2020, 10, 21)
-end_date = datetime(2020, 10, 22)
+
+start_date = "2020-10-21"
+end_date = "2020-10-22"
 
 variables = [
 ${selected.map(p => "\t\"" + p.name + "\"").join(",\n")}
 ]
-values = ${dataset}.get_values_between(
-  lat_pos, lon_pos, start_date, end_date, requested_values=variables
+
+ts = TimeSeries(
+    lon=lon_pos,
+    lat=lat_pos,
+    start_time=start_date,
+    end_time=end_date,
+    variable=variables,
+    product="${set.name}",
 )
 
+ts.import_data(save_csv=True, save_nc=False)
+
 # Coordinates we actually do get data for (nearest grid point)
-alat = values.latitude
-alon = values.longitude
+alat = ts.lat_data
+alon = ts.lon_data
 print(f"Actual coordinates: {alat} lon: {alon}")
 
-for name in variables:
-  value = values[name].values
-  if value.shape:
-      print(f"Mean of {name}: {value.mean()}")
-  else:
-      print(f"{name}: {value}")
+data = ts.data
 
+for name,vardata in data.items():
+    value = vardata.values
+    if value.shape:
+        print(f"Mean of {name}: {value.mean()}")
+    else:
+        print(f"{name}: {value}")
 `
 }
 

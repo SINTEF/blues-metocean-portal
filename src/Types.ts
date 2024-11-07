@@ -1,8 +1,7 @@
 
-export interface  DatasetContainer {
+export interface  DatasetProvider {
   name: string
-  containers?: DatasetContainer[]
-  datasets?: Dataset[]
+  datasets: Dataset[]
 }
 
 export interface  Dataset {

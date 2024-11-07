@@ -4,7 +4,7 @@ import { createGlobalStyle } from 'styled-components'
 import { backgroundColorDefault } from './layout/Colors'
 import Portal from './Portal'
 import { LinearProgress } from '@mui/material'
-import { DatasetContainer } from './Types'
+import { DatasetProvider } from './Types'
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -18,10 +18,10 @@ const GlobalStyle = createGlobalStyle`
 `
 
 interface MetPortal {
-  datasetContainers: DatasetContainer[]
+  providers: DatasetProvider[]
 }
 
-const init = { datasetContainers: [] }
+const init = { providers: [] }
 
 
 export const AppCtx = createContext<MetPortal>(init);

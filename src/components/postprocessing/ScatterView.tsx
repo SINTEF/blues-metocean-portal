@@ -1,22 +1,18 @@
-import { Checkbox, Grid, InputLabel, MenuItem, Select } from '@mui/material'
+import { Grid, InputLabel, MenuItem, Select } from '@mui/material'
 import Box from '@mui/material/Box'
 import { Stack } from '@mui/system'
 import { LatLng } from 'leaflet'
 import React, { useContext, useEffect, useState } from 'react'
 import { FeatureGroup, Polygon, TileLayer } from 'react-leaflet'
 import { AppCtx } from '../../App'
-import { Dataset,DatasetContainer,DatasetVariable } from '../../Types'
+import { Dataset,DatasetVariable } from '../../Types'
 import { CardWrapper } from '../Card'
 import CodeBox from '../CodeBox'
 import { DraggableMarker } from '../DragableMarker'
 import { StyledMapContainer } from '../Map'
 import { TextMarker } from '../TextMarker'
 import {toCodeString} from './ScatterTemplate'
-
-function findDatasets(container: DatasetContainer, selectedSets: Dataset[]) {
-  container.containers?.forEach(child => findDatasets(child, selectedSets))
-  container.datasets?.forEach(dataset => selectedSets.push(dataset))
-}
+import { toScatterCode} from './sima/SimaScatterTemplate'
 
 const ScatterView = () => {
 
@@ -28,32 +24,36 @@ const ScatterView = () => {
   const [selectedSet, setSelectedSet] = useState<Dataset>()
   const [variables, setVariables] = useState<DatasetVariable[]>([])
 
+  const outputs = ["Excel", "SIMA"]
+  const [output, setOutput] = useState<string>(outputs[0])
+
 
   const [column, setColumn] = useState<DatasetVariable>()
   const [row, setRow] = useState<DatasetVariable>()
-  const [auxs, setAuxs] = useState<DatasetVariable[]>([])
   const [code, setCode] = useState<string>("")
 
   useEffect(() => {
     if (selectedSet) {
-      setCode(toCodeString(selectedSet,position, row, column, auxs))
+      if (output === "SIMA") {
+        setCode(toScatterCode(selectedSet,position, row, column))
+      } else {
+        setCode(toCodeString(selectedSet,position, row, column))
+      }
     }
-  }, [position, selectedSet, column, row, auxs])
+  }, [position, selectedSet, column, row,output])
 
   useEffect(() => {
     if (selectedSet) {
-      setAuxs([])
       setRow(selectedSet.variables.find(v => v.name === (row ? row.name :  "hs")))
       setColumn(selectedSet.variables.find(v => v.name === (column ? column.name :  "tp")))
-      setVariables(selectedSet.variables.filter(hasTime))
+      setVariables(selectedSet.variables.filter(includeVariable))
     }
   }, [selectedSet,column,row])
 
   useEffect(() => {
     if (app) {
-      app.datasetContainers.forEach(container => {
-        const availableSets: Dataset[] = []
-        container.containers?.forEach(child => findDatasets(child, availableSets))
+      app.providers.forEach(container => {
+        const availableSets = container.datasets.filter(includeDataset)
         setDatasets(availableSets)
         if (availableSets.length > 0) {
           setSelectedSet(availableSets[0])
@@ -62,6 +62,26 @@ const ScatterView = () => {
     }
   }, [app])
 
+  function includeDataset(set: Dataset){
+    if(set.variables.find(includeVariable)){
+      return true;
+    }
+    return false;
+  }
+  
+  function hasUnit(variable: DatasetVariable, unit: string) {
+    const dims = variable.dimensions
+    const vunit = variable.unit
+    if (dims && dims.includes("time")) {
+      return vunit && (vunit === unit)
+    }
+    return false
+  }
+  
+  function includeVariable(variable: DatasetVariable) {
+    return hasUnit(variable,"m") || hasUnit(variable,"s")
+  }
+  
 
   function getArea(set: Dataset): [number, number][] {
     const lats = set.latitudes
@@ -75,28 +95,11 @@ const ScatterView = () => {
   }
 
   function Area(props: { set: Dataset }) {
-    // const color = mset.color
     return <>
       <FeatureGroup>
         <Polygon positions={getArea(props.set)} />
       </FeatureGroup>
     </>
-  }
-
-  function onChange(event: any, variable: DatasetVariable) {
-    if (event.target.checked) {
-      setAuxs([...auxs, variable])
-    } else {
-      setAuxs(auxs.filter(v => v !== variable))
-    }
-  }
-
-  function hasTime(variable: DatasetVariable) {
-    const dims = variable.dimensions
-    if (dims) {
-      return dims.includes("time")
-    }
-    return false
   }
 
   return (
@@ -132,13 +135,13 @@ const ScatterView = () => {
                     <MenuItem key={"col_" + variable.name} value={variable.name} onClick={() => setColumn(variable)}>{variable.name} - {variable.description}</MenuItem>
                   ))}
                 </Select>
-                <InputLabel>Auxillary variables (Optional, but can be included in the scatter):</InputLabel>
-                <Select multiple value={auxs.map(v => v.name)} renderValue={(selected) => selected.join(', ')} >
-                  {variables.filter(v => v !== column && v !== row).map(variable => (
-                    <div key={"aux_" + variable.name}>
-                      <Checkbox checked={auxs?.indexOf(variable) >= 0} onChange={event => onChange(event, variable)}></Checkbox>{variable.name} - {variable.description}
-                    </div>
-                  ))}
+                <InputLabel>Generated output:</InputLabel>
+                <Select
+                  id="select-output"
+                  value={output}
+                  label="Output"
+                >
+                  {outputs.map(label => <MenuItem key={label} value={label} onClick={() => setOutput(label)}>{label}</MenuItem>)}
                 </Select>
               </>
               }

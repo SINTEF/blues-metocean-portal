@@ -51,31 +51,6 @@ requested_values=["wind_speed","wind_direction","height"]
 years = range(start_date.year,end_date.year)
 syears = f"[{years.start}-{years.stop}]"
 
-wind_values = arome3km_3hr.get_values_between(lat_pos,lon_pos,start_date, end_date,requested_values,max_concurrent_downloads=max_concurrent_downloads)
-
-actual_lat = wind_values.latitude
-actual_lon = wind_values.longitude
-
-document.add_paragraph(f'Coordinates for collected data: latitude={actual_lat:.4f}, longitude={actual_lon:.4f}')
-
-
-iheight = 0
-speed = wind_values["wind_speed"][:,iheight]
-heights = wind_values["height"].values
-# Met: North West Up, wind_going_to
-# Wind rose: North East Down, wind coming from
-direction = np.fmod(wind_values["wind_direction"][:,0]+180.0, 360.0)
-
-ax = WindroseAxes.from_ax()
-ax.bar(direction, speed,bins=9,nsector=36, opening=0.8, edgecolor="white")
-ax.set_legend()
-ax.set_title(f"Wind - {syears} at {heights[iheight]} m")
-
-rose_image_path = "output/wind_rose.png"
-ax.figure.savefig(rose_image_path)
-width = document.sections[-1].page_width * 0.75
-document.add_picture(rose_image_path, width=width)
-
 # Now get the wave data
 document.add_page_break()
 document.add_heading('Wave data', 1)
@@ -92,8 +67,8 @@ values = wave_sub_time.get_values_between(lat_pos, lon_pos, start_date, end_date
 
 
 hs = values["hs"]
-actual_lat = wind_values.latitude
-actual_lon = wind_values.longitude
+actual_lat = values.latitude
+actual_lon = values.longitude
 
 
 document.add_paragraph(f'Coordinates for collected data: latitude={actual_lat:.4f}, longitude={actual_lon:.4f}')

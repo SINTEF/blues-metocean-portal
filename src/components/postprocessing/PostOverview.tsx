@@ -4,23 +4,20 @@ import { Grid2 as Grid } from '@mui/material'
 import Box from '@mui/material/Box'
 import { Menu } from 'antd'
 import '../../layout/Menu.css'
-import WindRoseView from './WindRoseView'
 import { cardBgColor } from '../../layout/Colors'
 import ScatterView from './ScatterView'
 import ReturnValueStats from './ReturnValueStats'
 import ContourView from './ContourView'
-import ReportView from './ReportView'
-import SimaView from './sima/SimaView'
+import HindcastView from './HindcastView'
 
 export const PostOverview = () => {
 
   const items = [
     { "key": "scatter", "title": "Scatter tables", content: <ScatterView/> },
-    { "key": "windrose", "title": "Wind roses", content: <WindRoseView/> },
     { "key": "returnperiod", "title": "Return values", content: <ReturnValueStats/> },
     { "key": "contours", "title": "Contour plot", content: <ContourView/> },
-    { "key": "report", "title": "Report generation", content: <ReportView/> },
-    { "key": "sima", "title": "SIMA Integration", content: <SimaView/> },
+    // { "key": "report", "title": "Report generation", content: <ReportView/> },
+    { "key": "sima", "title": "Hindcast", content: <HindcastView/> },
   ]
 
   const [selected, setSelected] = useState<{ "key": string, "title": string, content?: ReactNode  }>(items[0])

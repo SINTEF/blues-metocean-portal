@@ -5,18 +5,12 @@ import { LatLng } from 'leaflet'
 import React, { useContext, useEffect, useState } from 'react'
 import { FeatureGroup, Polygon, TileLayer } from 'react-leaflet'
 import { AppCtx } from '../../App'
-import { Dataset,DatasetContainer,DatasetVariable } from '../../Types'
+import { Dataset,DatasetVariable } from '../../Types'
 import { CardWrapper } from '../Card'
 import CodeBox from '../CodeBox'
 import { DraggableMarker } from '../DragableMarker'
 import { StyledMapContainer } from '../Map'
 import { TextMarker } from '../TextMarker'
-
-function findDatasets(container: DatasetContainer, selectedSets: Dataset[]) {
-  container.containers?.forEach(child => findDatasets(child, selectedSets))
-  container.datasets?.forEach(dataset => selectedSets.push(dataset))
-}
-
 
 const ReturnValueStats = () => {
 
@@ -29,27 +23,39 @@ const ReturnValueStats = () => {
   const [variables, setVariables] = useState<DatasetVariable[]>([])
 
 
-  const [row, setRow] = useState<DatasetVariable>()
+  const [selectedVariable, setSelectedVariable] = useState<DatasetVariable>()
   const [code, setCode] = useState<string>("")
 
-  useEffect(() => {
-    if (selectedSet && row && position) {
-      setCode(toCodeString(selectedSet,row,position))
+  function includeDataset(set: Dataset){
+    if(set.variables.find(includeVariable)){
+      return true;
     }
-  }, [position, selectedSet, row])
+    return false;
+  }
+
+  useEffect(() => {
+    if (selectedSet && selectedVariable && position) {
+      setCode(toCodeString(selectedSet,selectedVariable,position))
+    }
+  }, [position, selectedSet, selectedVariable])
 
   useEffect(() => {
     if (selectedSet) {
-      setRow(selectedSet.variables.find(v => v.name === (row ? row.name :  "hs")))
-      setVariables(selectedSet.variables.filter(hasTime))
+      const variables = selectedSet.variables.filter(includeVariable)
+      setVariables(variables)
+      const variable = variables.find(v => v.name === (selectedVariable ? selectedVariable.name :  variables[0].name))
+      if(variable){
+        setSelectedVariable(variable)
+      }else{
+        setSelectedVariable(variables[0])
+      }
     }
-  }, [selectedSet,row])
+  }, [selectedSet])
 
   useEffect(() => {
     if (app) {
-      app.datasetContainers.forEach(container => {
-        const availableSets: Dataset[] = []
-        container.containers?.forEach(child => findDatasets(child, availableSets))
+      app.providers.forEach(container => {
+        const availableSets = container.datasets.filter(includeDataset)
         setDatasets(availableSets)
         if (availableSets.length > 0) {
           setSelectedSet(availableSets[0])
@@ -59,50 +65,54 @@ const ReturnValueStats = () => {
   }, [app])
 
   function toCodeString(set: Dataset, variable: DatasetVariable, position: LatLng) {
-    const api = set.api
-    const idx = api.lastIndexOf(".")
-    const dataset = api.substring(idx + 1)
-    const imprt = api.substring(0, idx)
     const name = variable.name
     const pos = { lat: position.lat.toFixed(4), lng: position.lng.toFixed(4) }
+    const start_date = "1999-01-01"
+    const end_date = "2002-12-31"
    return `
 """
 Calculate return values for selected datasets
 
-Required libraries:
-
-pip install virocon
-pip install xclim
-
 """
-from datetime import datetime
-
-from bluesmet.${imprt} import ${dataset}
-
-from bluesmet.normet.metengine.extreme_stats import return_value
+import xarray as xr
+from metocean_api import ts
+from metocean_stats.stats.extreme import return_levels_pot
 
 # Coordinates we want to get data for
 lat_pos = ${pos.lat}
 lon_pos = ${pos.lng}
-start_date = datetime(1997, 1, 1)
-end_date = datetime(2007, 12, 31)
+start_date = "${start_date}"
+end_date = "${end_date}"
 
-variables = [
+requested_values = [
     "${name}",
 ]
 
-values = wave_sub_time.get_values_between(lat_pos, lon_pos, start_date, end_date, requested_values=variables)
+df_ts = ts.TimeSeries(
+    lon=lon_pos,
+    lat=lat_pos,
+    start_time=start_date,
+    end_time=end_date,
+    variable=requested_values,
+    product="${set.name}",
+)
 
-return_periods=[5,10,50,100]
+# If the requested variable is changed after running, the cache must be deleted manually before running again
+df_ts.import_data(save_csv=False, save_nc=False,use_cache=True)
 
-for name in variables:
-    print("Computing return value for " + name)
-    value = values[name]
-    ret = return_value(value, return_periods)
-    for value, rp in zip(ret.values,return_periods):
-        print("Value for return period " + str(rp) + " years: " + str(value))
-    print()
+return_periods = [5,10]
 
+data = df_ts.data
+# Pick the first variable in the dataset
+variable = data.columns[0]
+
+ret =  return_levels_pot(df_ts.data, variable,periods=return_periods)
+
+values = ret.return_levels
+
+print(f"Return values for {variable}")
+for rp,rv in zip(return_periods,values):
+    print(f"{rp} years: {rv:.2f} m")
 `
   }
 
@@ -127,10 +137,10 @@ for name in variables:
   }
 
 
-  function hasTime(variable: DatasetVariable) {
+  function includeVariable(variable: DatasetVariable) {
     const dims = variable.dimensions
     if (dims) {
-      return dims.includes("time")
+      return dims.includes("time") && variable.name !== "time"
     }
     return false
   }
@@ -156,9 +166,9 @@ for name in variables:
                 </Select>
                 <InputLabel>Variable:</InputLabel>
                 <Select
-                  value={row?.name || ''}>
+                  value={selectedVariable?.name || ''}>
                   {variables.map(variable => (
-                    <MenuItem key={"row_" + variable.name} value={variable.name} onClick={() => setRow(variable)}>{variable.name} - {variable.description}</MenuItem>
+                    <MenuItem key={"row_" + variable.name} value={variable.name} onClick={() => setSelectedVariable(variable)}>{variable.name} - {variable.description}</MenuItem>
                   ))}
                 </Select>
               </>

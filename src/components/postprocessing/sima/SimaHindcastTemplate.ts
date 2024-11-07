@@ -3,10 +3,6 @@ import { Dataset,DatasetVariable } from '../../../Types'
 
 
 export function toHindcastCode(set: Dataset, position: LatLng, hs?: DatasetVariable, tp?: DatasetVariable) {
-    const api = set.api
-    const idx = api.lastIndexOf(".")
-    const dataset = api.substring(idx + 1)
-    const imprt = api.substring(0, idx)
     const pos = { lat: position.lat.toFixed(4), lng: position.lng.toFixed(4) }
     return `
 """
@@ -21,7 +17,6 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from dmt.dmt_writer import DMTWriter
-from bluesmet.${imprt} import ${dataset}
 import simapy.metocean.hindcast as hc
 
 

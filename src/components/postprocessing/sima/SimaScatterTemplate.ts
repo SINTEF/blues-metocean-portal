@@ -3,105 +3,80 @@ import { Dataset,DatasetVariable } from '../../../Types'
 
 
 export function toScatterCode(set: Dataset, position: LatLng, hs?: DatasetVariable, tp?: DatasetVariable) {
-    const api = set.api
-    const idx = api.lastIndexOf(".")
-    const dataset = api.substring(idx + 1)
-    const imprt = api.substring(0, idx)
     const pos = { lat: position.lat.toFixed(4), lng: position.lng.toFixed(4) }
     const rv = hs ? hs.name : "hs"
     const cv = tp ? tp.name : "tp"
     const bins = [rv, cv]
-    const variables = bins
     return `
 """
-Create a scatter table from wave and wind data
-and save it as sima metocean scatter data using (SIMAPY python library)[https://github.com/SINTEF/simapy]
+Create a scatter table using (metocean stats library)[https://metocean-stats.readthedocs.io]
+and save it as SIMA metocean scatter data using (SIMAPY python library)[https://github.com/SINTEF/simapy]
+The data can then be imported into SIMA and used to run multiple cases/conditions.
+Right click (Metocean Task)[https://www.sima.sintef.no/doc/4.8.0/metocean/index.html] in SIMA and choose "import metocean data", then select the generated file to import
 
-Required libraries:
 
-pip install simapy
 """
-from datetime import datetime
 from pathlib import Path
-
-import bluesmet.common.scatter as bluesmet
-import simapy.metocean.scatter as simamet
-from bluesmet.${imprt} import ${dataset}
+import pandas as pd
+from metocean_api import ts
+from metocean_stats.stats.general import calculate_scatter
+from simapy.metocean.scatter.scatter import Scatter as SimaScatter
+from simapy.metocean.scatter.sector import Sector
+from simapy.metocean.scatter.wave import Wave
 from dmt.dmt_writer import DMTWriter
 
-def _create_sima_scatter(scatter: bluesmet.Scatter, description: str) -> simamet.Scatter:
-    sima_scatter = simamet.Scatter()
+
+def _create_sima_scatter(scatter: pd.DataFrame) -> SimaScatter:
+    sima_scatter = SimaScatter()
     sima_scatter.name = "Scatter"
-    hs = scatter.row_values()
-    tp = scatter.column_values()
-    occurences = scatter.occurences()
+    hs = scatter.index
+    tp = scatter.columns
+    occurences = scatter.values
 
     sima_scatter.hsUpperLimits = hs
     sima_scatter.tpUpperLimits = tp
 
-    omni = simamet.Sector()
+    omni = Sector()
     omni.name = "Omni"
-    omni.description = description
+    omni.description = f"Omni-directional scatter table of {var1_name} vs {var2_name} reated from product {product} for the period {start_date} to {end_date}"
     sima_scatter.omni = omni
-    wave = simamet.Wave()
+    wave = Wave()
     wave.occurrence = occurences
     omni.wave = wave
-
-    wdir=scatter.get_values("wind_dir")
-    wspeed = scatter.get_values("wind_speed")
-    wc = simamet.WindCurrent()
-    # Assumption on level, as the dataset does not state the reference height
-    wc.level = 10.0
-    wc.speed = wspeed
-    wc.direction = wdir
-    omni.wind = [wc]
     return sima_scatter
 
+lat_pos = ${pos.lat}
+lon_pos = ${pos.lng}
+start_date = "2020-10-21"
+end_date = "2020-11-21"
 
-def create_scatter():
-    """Write a scatter table to an excel file and sima metocean data"""
-    lat_pos = ${pos.lat}
-    lon_pos = ${pos.lng}
-    start_date = datetime(2020, 10, 21)
-    end_date = datetime(2020, 11, 21)
-    variables = [${variables.map(v => "\"" + v + "\"").join(",")},"ff","dd"]
-    md = ${dataset}.get_metadata()
-    url = md["global"]["url"]
-    values = ${dataset}.get_values_between(
-        lat_pos, lon_pos, start_date, end_date, requested_values=variables
-    )
+product = "${set.name}"
+var1_name = "${rv}"
+var2_name = "${cv}"
 
-    output = Path("./output/simamet")
-    output.mkdir(parents=True, exist_ok=True)
+var1_block_size = 1.0
+var2_block_size = 2.0
 
-    bin_size = 2.0
-    scatter = bluesmet.Scatter(bin_size=bin_size)
+requested_values = [var1_name, var2_name]
 
-    for ${variables.join(",")},ff,dd in zip(${variables.map(v => "values[\"" + v + "\"]").join(",")},values["ff"],values["dd"]):
-        # We need to convert the wind direction to match the system for Metocean task in SIMA
-        # Met: North West Up, wind_going_to
-        # SIMA: North East Down, wind coming from
-        # SIMA direction = MET dir + 90 deg
-        wind_dir = (dd+90.0) % 360.0
-        scatter.add(${bins.join(",")},wind_dir=wind_dir,wind_speed=ff)
+df_ts = ts.TimeSeries(
+    lon=lon_pos,
+    lat=lat_pos,
+    start_time=start_date,
+    end_time=end_date,
+    variable=requested_values,
+    product=product,
+)
 
-    sd = start_date.strftime("%Y.%m.%d.%H")
-    ed = end_date.strftime("%Y.%m.%d.%H")
+df_ts.import_data(save_csv=False, save_nc=False, use_cache=True)
 
-    description = f"""
-Created with data from met.no
-From {sd} to {ed} at latitude={lat_pos}, longitude={lon_pos}
-See {url}"""
-    sima_scatter = _create_sima_scatter(scatter,description)
+scatter: pd.DataFrame = calculate_scatter(df_ts.data, var1_name, var1_block_size, var2_name, var2_block_size)
 
-    prefix = f"omnidir_scatter_{sd}-{ed}_lat={lat_pos}_lon={lon_pos}"
-    path = output / f"{prefix}.h5"
-    DMTWriter().write(sima_scatter, path)
-    print(f"Saved to {path.resolve()}")
+sima_scatter = _create_sima_scatter(scatter)
 
-
-if __name__ == "__main__":
-    create_scatter()
-
+path = Path(f"./output/simamet/scatter_{product}-{start_date}-{end_date}.h5")
+path.parent.mkdir(parents=True, exist_ok=True)
+DMTWriter().write(sima_scatter, path)
+print(f"Saved to {path.resolve()}")
 `
 }

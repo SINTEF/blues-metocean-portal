@@ -10,7 +10,6 @@ import ResponsiveAppBar from './layout/ResponsiveAppBar'
 import AppOverview from './AppOverview'
 import { DatasetOverview } from './components/datasets/DatasetOverview'
 import { PostOverview } from './components/postprocessing/PostOverview'
-import WindRoseView from './components/postprocessing/WindRoseView'
 
 
 const MainLayout = (props: { heading: string, content: ReactNode }) => {
@@ -43,12 +42,7 @@ const ROUTES = [
     path: '/postprocessing',
     heading: 'Post processing',
     content: <PostOverview />,
-  },
-  {
-    path: '/windrose',
-    heading: 'Windroses',
-    content: <WindRoseView />,
-  },
+  }
 ]
 
 const Portal = (): JSX.Element => {

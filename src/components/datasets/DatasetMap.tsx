@@ -12,11 +12,17 @@ export interface MapDataset {
   color: string
 }
 
+const default_center:  [number, number] = [67, 40]
+
 function calculateMapCenter(mset: MapDataset): [number, number] {
+
   // return [62.536484, 4.176969]
   const set = mset.dataset
   const lats = set.latitudes
   const lons = set.latitudes
+  if (lats.length === 0) {
+    return default_center
+  }
   const lat_mean = lats.reduce((a, b) => (a + b)) / lats.length;
   const lon_mean = lons.reduce((a, b) => (a + b)) / lons.length;
   return [lat_mean, lon_mean]
@@ -27,7 +33,7 @@ function calculateTotalMapCenter(sets: MapDataset[]): [number, number] {
     const lat = (prev[0] + current[0]) / 2
     const lon = (prev[1] + current[1]) / 2
     return [lat, lon];
-  }, [67, 40]);
+  }, default_center);
 }
 
 function calculateArea(set: Dataset): [number, number][] {

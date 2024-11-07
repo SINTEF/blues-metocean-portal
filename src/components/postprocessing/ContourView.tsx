@@ -5,7 +5,7 @@ import { LatLng } from 'leaflet'
 import React, { useContext, useEffect, useState } from 'react'
 import { FeatureGroup, Polygon, TileLayer } from 'react-leaflet'
 import { AppCtx } from '../../App'
-import { Dataset,DatasetContainer,DatasetVariable } from '../../Types'
+import { Dataset,DatasetVariable } from '../../Types'
 import { CardWrapper } from '../Card'
 import CodeBox from '../CodeBox'
 import { DraggableMarker } from '../DragableMarker'
@@ -22,15 +22,15 @@ function hasUnit(variable: DatasetVariable, unit: string) {
   return false
 }
 
-function isHsOrTp(variable: DatasetVariable) {
-  return hasUnit(variable,"m") || hasUnit(variable,"s")
+function includeDataset(set: Dataset){
+  if(set.variables.find(includeVariable)){
+    return true;
+  }
+  return false;
 }
 
-function findDatasets(container: DatasetContainer, selectedSets: Dataset[]) {
-  container.containers?.forEach(child => findDatasets(child, selectedSets))
-  container.datasets?.forEach(dataset => {
-    selectedSets.push(dataset)
-  })
+function includeVariable(variable: DatasetVariable) {
+  return hasUnit(variable,"m") || hasUnit(variable,"s")
 }
 
 function getArea(set: Dataset): [number, number][] {
@@ -54,50 +54,42 @@ function Area(props: { set: Dataset }) {
 }
 
 function toCodeString(set: Dataset, position: LatLng, row?: DatasetVariable, column?: DatasetVariable) {
-  const api = set.api
-  const idx = api.lastIndexOf(".")
-  const dataset = api.substring(idx + 1)
-  const imprt = api.substring(0, idx)
   const pos = { lat: position.lat.toFixed(4), lng: position.lng.toFixed(4) }
   const hs = row ? row.name : "hs"
   const tp = column ? column.name : "tp"
+  const start_date = "1997-01-01"
+  const end_date = "1997-12-31"
   return `
 """
-Calculate contours for selected datasets
-
-Required libraries:
-
-pip install virocon
-pip install xclim
+Plot contours for selected datasets
 
 """
-from datetime import datetime
-
-from bluesmet.${imprt} import ${dataset}
-from bluesmet.normet.metengine.extreme_stats import joint_2D_contour
-
-
+from metocean_api import ts
+from metocean_stats.plots.extreme import plot_joint_distribution_Hs_Tp
+  
 # Coordinates we want to get data for
 lat_pos = ${pos.lat}
 lon_pos = ${pos.lng}
-start_date = datetime(2020, 1, 1)
-end_date = datetime(2022, 12, 31)
+start_date = "${start_date}"
+end_date = "${end_date}"
 
-variables = ["${hs}", "${tp}"]
+requested_values = ["${hs}", "${tp}"]
 
-values = wave_sub_time.get_values_between(
-  lat_pos, lon_pos, start_date, end_date, requested_values=variables
+df_ts = ts.TimeSeries(
+    lon=lon_pos,
+    lat=lat_pos,
+    start_time=start_date,
+    end_time=end_date,
+    variable=requested_values,
+    product="${set.name}",
 )
 
-${hs} = values["${hs}"]
-${tp} = values["${tp}"]
+df_ts.import_data(save_csv=True, save_nc=False)
+values = df_ts.data
 
 path = "output/joint_contour.png"
 
-joint_2D_contour(
-  ${hs}, ${tp}, return_periods=[5, 10, 50, 100], image_path=path, image_title="Contour"
-)
-
+plot_joint_distribution_Hs_Tp(values,"${hs}","${tp}",periods=[5, 10, 50, 100], output_file=path)
 `
 }
 
@@ -128,15 +120,14 @@ const ContourView = () => {
     if (selectedSet) {
       setHs(selectedSet.variables.find(v => v.name === (hs ? hs.name :  "hs")))
       setTp(selectedSet.variables.find(v => v.name === (tp ? tp.name :  "tp")))
-      setVariables(selectedSet.variables.filter(isHsOrTp))
+      setVariables(selectedSet.variables.filter(includeVariable))
     }
   }, [selectedSet,hs,tp])
 
   useEffect(() => {
     if (app) {
-      app.datasetContainers.forEach(container => {
-        const availableSets: Dataset[] = []
-        container.containers?.forEach(child => findDatasets(child, availableSets))
+      app.providers.forEach(container => {
+        const availableSets = container.datasets.filter(includeDataset)
         setDatasets(availableSets)
         if (availableSets.length > 0) {
           setSelectedSet(availableSets[0])

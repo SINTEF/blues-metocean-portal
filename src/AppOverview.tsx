@@ -2,6 +2,7 @@ import { Grid } from '@mui/material'
 import Box from '@mui/material/Box'
 import React from 'react'
 import CodeBox from './components/CodeBox'
+import { Link } from 'react-router-dom';
 import { backgroundColorDefault, cardBgColor } from './layout/Colors'
 import './layout/Menu.css'
 
@@ -17,7 +18,7 @@ const AppOverview = () => {
           For example of usage in SIMA, see the <a href='https://github.com/SINTEF/simapy-examples/tree/main/src/metocean'>example repository </a> or the examples in the code repositories of the libraries.
         </div>
         <div>
-          To start, you can head over to the <a href='/datasets'>datasets</a> section and select some data of interest or directly to <a href='/postprocessing'>post processing</a> to find different applications of the library
+          To start, you can head over to the <Link to="/datasets">datasets</Link> section and select some data of interest or directly to <Link to="/postprocessing">post processing</Link> to find different applications of the library
         </div>
         <b/>
         <p>To install the library and its dependencies, you can use the following command:</p>

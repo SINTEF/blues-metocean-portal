@@ -4,7 +4,8 @@ Web Portal deployed to https://sintef.github.io/blues-metocean-portal/
 
 Funded by the [SFI Blues](https://sfiblues.no/) project
 
-The portal demonstrates the use of the [SFIBlues Python library ](https://github.com/SINTEF/blues-metocean-lib)
+The portal demonstrates the use of the [metocean-api](https://metocean-api.readthedocs.io/) and [metocean-stats](https://metocean-stats.readthedocs.io/) python libraries from [Norwegian Meteorological Institute](https://www.met.no/en) as well as integration towards [SIMA](https://sima.sintef.no/)
+
 
 ## Prerequisites
 

@@ -1,3 +1,12 @@
 node_modules/
 build/
 .vscode/
+output/
+__pycache__/
+*.py[cod]
+*$py.class
+.mypy_cache
+*.egg-info
+.pypirc
+.vscode/
+venv/
